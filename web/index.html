@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Side-by-side comparison of SNCB and Belgian Mobility GTFS realtime trip updates, refreshed during Brussels peak hours.">
+  <meta name="theme-color" content="#2460BB">
+  <title>SNCB × BMC · Feed comparison</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <a href="./" class="brand" aria-label="iRail feed comparison"><img class="brand-logo" src="logo.svg" alt=""><span>iRail</span></a><span class="header-title">Feed comparison</span><span class="schedule">Hourly · 07–09 & 17–20 · Brussels</span>
+  </header>
+  <main class="app-shell">
+    <div class="page-heading"><div class="view-heading"><h1>GTFS realtime comparison</h1><p>SNCB and Belgian Mobility trip updates.</p></div><div class="snapshot"><p id="generated-at" aria-label="Snapshot timestamp">Loading report…</p><a href="report.json" download>Download snapshot JSON</a></div></div>
+    <div id="notice" role="status" aria-live="polite"></div>
+    <noscript><p class="notice">Enable JavaScript to view the report, or download the snapshot JSON above.</p></noscript>
+    <section class="report-panel coverage-panel" aria-labelledby="coverage-heading">
+      <div class="section-title"><h2 id="coverage-heading">What’s announced</h2><span class="muted">SNCB is the reference · red indicates BMC differences</span></div>
+      <div class="feed-headings"><div class="feed-title sncb"><h3>SNCB</h3><span id="sncb-status" class="feed-status">Loading</span></div><div class="feed-title bmc"><h3>BMC</h3><span id="bmc-status" class="feed-status">Loading</span></div></div>
+      <div id="metrics" class="metrics" aria-busy="true"><p class="loading">Loading feed statistics…</p></div>
+      <div class="feed-metadata"><div id="sncb-meta"></div><div id="bmc-meta"></div></div>
+    </section>
+    <section class="distributions report-panel" aria-labelledby="delays-heading">
+      <div><div class="section-title"><h2 id="delays-heading">Delay distribution</h2><span class="muted">Trips with a positive delay</span></div><div id="distribution"></div></div>
+      <div class="agreement"><h2>How closely do they match?</h2><div id="agreement"><p class="muted">Loading comparison…</p></div></div>
+    </section>
+    <section class="trip-section" aria-labelledby="trips-heading">
+      <div class="section-title"><h2 id="trips-heading">Trips with an announced delay <span id="trip-count" class="count"></span></h2><span class="muted">Largest delay first</span></div>
+      <p class="table-note">Maximum explicit delay per trip. Expand a trip for arrival and departure delays at each reported stop. Δ = BMC − SNCB.</p>
+      <div class="table-scroll"><table class="trip-table"><caption class="sr-only">Delayed trips and maximum announced delay in each feed</caption><thead><tr><th scope="col">Trip / service instance</th><th scope="col" class="sncb-text">SNCB</th><th scope="col" class="bmc-text">BMC</th><th scope="col">Δ</th><th scope="col"><span class="sr-only">Stop details</span></th></tr></thead><tbody id="trips"><tr><td colspan="5" class="empty">Loading trip details…</td></tr></tbody></table></div>
+    </section>
+    <section class="methodology" aria-labelledby="method-heading"><h2 id="method-heading">Reading this comparison</h2><div class="method-grid"><div><h3>Trip matching</h3><p>Exact trip ID, service date and start time, after removing BMC’s <code>gt:nmbssncb:</code> namespace. Missing dates or times stay empty. Different identifiers are not guessed to be the same train.</p></div><div><h3>What counts as a delay</h3><p>A positive, explicit arrival, departure or trip-level delay, in seconds. A trip’s headline value is its largest reported delay, including past stops. Cancelled trips and skipped or NO_DATA stops are excluded from delay counts. Missing delay fields stay unknown; no delays are derived from timestamps.</p></div><div><h3>Snapshot timing</h3><p>Both feeds are fetched concurrently for each report. Different publication times can explain discrepancies. Feed timestamps older than five minutes are flagged. The report refreshes daily at 07:00, 08:00, 09:00, 17:00, 18:00, 19:00 and 20:00 Europe/Brussels; GitHub may delay scheduled runs.</p></div></div></section>
+  </main>
+  <footer class="site-footer"><p>iRail · Public transport, open data.</p><div><a href="https://github.com/iRail/gtfs-rt-comparison">Source & workflow</a><a href="https://gtfs.org/documentation/realtime/reference/">GTFS-RT reference</a></div></footer>
+</body>
+</html>

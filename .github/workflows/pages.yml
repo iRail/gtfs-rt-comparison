@@ -1,0 +1,60 @@
+name: Build and deploy feed comparison
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: '0 7-9,17-20 * * *'
+      timezone: Europe/Brussels
+
+permissions:
+  contents: read
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install protobuf bindings
+        run: python -m pip install -r requirements.txt
+      - name: Verify comparison logic
+        run: python -m unittest discover -s tests -v
+      - name: Fetch feeds and build report
+        env:
+          SNCB_FEED_URL: ${{ vars.SNCB_FEED_URL }}
+          BMC_FEED_URL: ${{ vars.BMC_FEED_URL }}
+          SNCB_AUTH_HEADER: ${{ vars.SNCB_AUTH_HEADER }}
+          SNCB_AUTH_VALUE: ${{ secrets.SNCB_AUTH_VALUE }}
+          BMC_AUTH_HEADER: ${{ vars.BMC_AUTH_HEADER }}
+          BMC_AUTH_VALUE: ${{ secrets.BMC_AUTH_VALUE }}
+        run: python scripts/build_report.py --output _site
+      - name: Upload report for GitHub Pages
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/configure-pages@v5
+      - name: Deploy report
+        id: deployment
+        uses: actions/deploy-pages@v4
