@@ -76,10 +76,10 @@ img {
   gap: 1rem;
   min-height: 72px;
   padding: .8rem clamp(1rem, 4vw, 3rem);
-  border-bottom: 1px solid rgba(25, 73, 143, .55);
-  background: var(--accent);
+  border-bottom: 1px solid rgba(159, 31, 31, .55);
+  background: #c72929;
   color: #fff;
-  box-shadow: 0 12px 30px rgba(36, 96, 187, .2);
+  box-shadow: 0 12px 30px rgba(199, 41, 41, .2);
 }
 
 .brand {
@@ -242,18 +242,7 @@ h3 { font-size: 1rem; }
 .feed-metadata p + p { margin-top: .2rem; }
 .feed-metadata .warn { color: var(--error); }
 .notice { margin: 0 0 1.25rem; padding: 1rem; border: 1px solid #f3b5b5; border-radius: var(--radius); background: #fff4f4; color: #8f1a1a; font-size: .9rem; }
-.distributions { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 1.5rem; margin: 1.5rem 0; padding: 1rem; }
-.distribution-row { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: .85rem; align-items: center; margin: .85rem 0; }
-.distribution-label { font-size: .9rem; }
-.distribution-bars { display: grid; gap: .45rem; }
-.distribution-bar { display: grid; grid-template-columns: 40px minmax(0, 1fr) 42px; gap: .5rem; align-items: center; font-size: .8rem; }
-.distribution-track { height: 9px; border-radius: 6px; overflow: hidden; background: var(--line-soft); }
-.distribution-track span { display: block; height: 100%; background: var(--sncb); }
-.distribution-bar.bmc .distribution-track span { background: var(--bmc); }
-.distribution-number { color: #000; text-align: right; font-variant-numeric: tabular-nums; }
-.distribution-bar.is-mismatch .distribution-track span { min-width: 2px; background: var(--error); }
-.distribution-difference { grid-column: 2 / -1; color: var(--error); text-align: right; }
-.agreement { min-width: 0; padding-left: 1.5rem; border-left: 1px solid var(--line); }
+.agreement { min-width: 0; margin: 1.5rem 0; padding: 1rem; }
 .agreement-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .75rem; margin: 1rem 0; }
 .agreement-number { display: block; font-size: 1.7rem; font-weight: 900; font-variant-numeric: tabular-nums; }
 .agreement-label { display: block; color: var(--muted); font-size: .8rem; }
@@ -301,8 +290,6 @@ code { font-family: var(--mono); font-size: .85em; }
   .header-title { margin-left: auto; font-size: .9rem; }
   .page-heading { align-items: flex-start; flex-direction: column; gap: 1rem; }
   .snapshot { flex-basis: auto; text-align: left; }
-  .distributions { grid-template-columns: minmax(0, 1fr); }
-  .agreement { padding: 1rem 0 0; border-left: 0; border-top: 1px solid var(--line); }
   .metric-top { flex-direction: column; gap: .45rem; }
   .metric-reading { align-items: flex-start; }
   .metric-difference { text-align: left; }
@@ -318,15 +305,14 @@ code { font-family: var(--mono); font-size: .85em; }
   .brand-logo { width: 26px; height: 26px; }
   .view-heading h1 { font-size: clamp(1.7rem, 9vw, 2.6rem); }
   .report-panel, .table-scroll { border-radius: 6px; }
-  .coverage-panel, .distributions { padding: .75rem; }
+  .coverage-panel, .agreement { padding: .75rem; }
   .feed-headings, .metrics, .feed-metadata { column-gap: .65rem; }
   .feed-title, .metric { padding: .75rem; }
   .feed-title { flex-wrap: wrap; gap: .3rem; }
   .feed-status { margin-left: 0; flex-basis: 100%; font-size: .8rem; }
-  .distribution-row { grid-template-columns: 65px minmax(0, 1fr); gap: .5rem; }
   th, td { padding: .75rem; }
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .metric-bar span, .distribution-track span { transition: width .3s ease; }
+  .metric-bar span { transition: width .3s ease; }
 }

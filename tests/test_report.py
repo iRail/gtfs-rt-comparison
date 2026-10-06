@@ -76,12 +76,6 @@ class FeedTests(unittest.TestCase):
         self.assertIsNone(result["trips"][0]["max_delay_seconds"])
         self.assertEqual(result["stats"]["usable_stop_updates"], 0)
 
-    def test_bucket_boundaries(self):
-        message = feed()
-        for value in [1, 299, 300, 899, 900]:
-            add_trip(message, str(value), delays=(value,))
-        self.assertEqual(parsed(message)["stats"]["delay_buckets"], {"under_5": 2, "5_to_15": 2, "15_plus": 1})
-
     def test_duplicate_retains_newest(self):
         message = feed()
         add_trip(message, delays=(600,)).timestamp = 200

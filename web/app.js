@@ -46,15 +46,6 @@ function metrics(feeds) {
     byId(`${name}-meta`).innerHTML = feed.status === "error" ? `<p class="warn">${escapeHTML(feed.error)}</p>` : `<p>Feed published ${escapeHTML(dateTime(feed.feed_timestamp, true))}</p><p>Fetched ${escapeHTML(dateTime(feed.fetched_at, true))} · ${number(feed.entities)} entities · ${number(Math.round(feed.bytes / 1024))} KiB</p>${feed.warnings.map((warning) => `<p class="warn">${escapeHTML(warning)}</p>`).join("")}`;
   }
 }
-function distribution(feeds) {
-  const buckets = [["under_5", "< 5 min"], ["5_to_15", "5–15 min"], ["15_plus", "≥ 15 min"]];
-  const maximum = Math.max(1, ...Object.values(feeds).flatMap((feed) => Object.values(feed.stats?.delay_buckets ?? {})));
-  byId("distribution").innerHTML = buckets.map(([key, label]) => `<div class="distribution-row"><span class="distribution-label">${label}</span><div class="distribution-bars">${["sncb", "bmc"].map((name) => {
-    const value = feeds[name].stats?.delay_buckets[key];
-    const difference = name === "bmc" ? discrepancy(value, feeds.sncb.stats?.delay_buckets[key]) : "";
-    return `<div class="distribution-bar ${name}${difference ? " is-mismatch" : ""}"><span class="${name}-text">${name.toUpperCase()}</span><div class="distribution-track" aria-hidden="true"><span style="width:${(value ?? 0) / maximum * 100}%"></span></div><span class="distribution-number">${number(value)}</span>${difference ? `<span class="distribution-difference">${escapeHTML(difference)}</span>` : ""}</div>`;
-  }).join("")}</div></div>`).join("");
-}
 function agreement(comparison) {
   const blocks = [[comparison.matched_trips, "Matched trips"], [comparison.sncb_only, "Missing from BMC"], [comparison.bmc_only, "Extra in BMC"]];
   byId("agreement").innerHTML = `<div class="agreement-grid">${blocks.map(([value, label]) => `<div><span class="agreement-number">${number(value)}</span><span class="agreement-label">${label}</span></div>`).join("")}</div>` + (comparison.available ? `<p><strong>${number(comparison.same_max_delay)}</strong> same maximum delay · <strong>${number(comparison.different_max_delay)}</strong> different</p><p>${number(comparison.comparable_delays)} matched trips have explicit delays in both feeds. Comparing maxima does not establish equality at every stop.</p>` : `<p>Matching is unavailable until both feeds can be fetched. Missing feed data is not counted as missing trips.</p>`);
@@ -139,7 +130,6 @@ async function main() {
     if (report.comparison.available && !report.comparison.matched_trips && Object.values(report.feeds).some((feed) => feed.stats.trips > 0)) messages.push("No trip instances match across these snapshots. Compare coverage independently; identifiers, service dates or start times may differ.");
     notices(messages);
     metrics(report.feeds);
-    distribution(report.feeds);
     agreement(report.comparison);
     renderTrips(report);
   } catch (error) {

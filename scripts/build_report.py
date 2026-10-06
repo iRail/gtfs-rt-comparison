@@ -91,9 +91,6 @@ def trip_key(trip):
 
 def summarize(trips):
     delayed = [trip["max_delay_seconds"] for trip in trips if trip["delayed"]]
-    buckets = {"under_5": 0, "5_to_15": 0, "15_plus": 0}
-    for delay in delayed:
-        buckets["under_5" if delay < 300 else "5_to_15" if delay < 900 else "15_plus"] += 1
     return {
         "trips": len(trips),
         "stop_updates": sum(len(trip["stops"]) for trip in trips),
@@ -108,7 +105,6 @@ def summarize(trips):
         "cancelled_trips": sum(trip["cancelled"] for trip in trips),
         "mean_max_delay_seconds": round(sum(delayed) / len(delayed), 1) if delayed else None,
         "largest_delay_seconds": max(delayed) if delayed else None,
-        "delay_buckets": buckets,
     }
 
 

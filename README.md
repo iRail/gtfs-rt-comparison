@@ -1,8 +1,8 @@
 # SNCB × BMC GTFS-RT comparison
 
-A GitHub Pages report with side-by-side feed coverage, delay distributions, trip matching and expandable arrival/departure delays at each reported stop. The report is built from two concurrently fetched snapshots, with no live browser requests to the upstream feeds.
+A GitHub Pages report with side-by-side feed coverage, trip matching and expandable arrival/departure delays at each reported stop. The report is built from two concurrently fetched snapshots, with no live browser requests to the upstream feeds.
 
-The interface copies the header, branding, typography, page width and footer styles from `../irail.be`, with a blue theme and comparison-specific layouts in `web/styles.css`. The iRail logo and favicon are copied from that project's existing SVG assets. SNCB is the reference: BMC statistic bars turn red when totals differ, with red missing/extra counts under the black totals. Maximum-delay differences use time units rather than item counts. Missing trips/stops and non-zero delay deltas are red; announced delay values remain black. Unknown values are not treated as mismatches.
+The interface copies the red header, branding, typography, page width and footer styles from `../irail.be`, with blue statistics and comparison-specific layouts in `web/styles.css`. The iRail logo and favicon are copied from that project's existing SVG assets. SNCB is the reference: BMC statistic bars turn red when totals differ, with red missing/extra counts under the black totals. Maximum-delay differences use time units rather than item counts. Missing trips/stops and non-zero delay deltas are red; announced delay values remain black. Unknown values are not treated as mismatches.
 
 ## Feeds
 

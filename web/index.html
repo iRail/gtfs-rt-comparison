@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Side-by-side comparison of SNCB and Belgian Mobility GTFS realtime trip updates, refreshed during Brussels peak hours.">
-  <meta name="theme-color" content="#2460BB">
+  <meta name="theme-color" content="#C72929">
   <title>SNCB × BMC · Feed comparison</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="styles.css">
@@ -24,9 +24,8 @@
       <div id="metrics" class="metrics" aria-busy="true"><p class="loading">Loading feed statistics…</p></div>
       <div class="feed-metadata"><div id="sncb-meta"></div><div id="bmc-meta"></div></div>
     </section>
-    <section class="distributions report-panel" aria-labelledby="delays-heading">
-      <div><div class="section-title"><h2 id="delays-heading">Delay distribution</h2><span class="muted">Trips with a positive delay</span></div><div id="distribution"></div></div>
-      <div class="agreement"><h2>How closely do they match?</h2><div id="agreement"><p class="muted">Loading comparison…</p></div></div>
+    <section class="agreement report-panel" aria-labelledby="agreement-heading">
+      <h2 id="agreement-heading">How closely do they match?</h2><div id="agreement"><p class="muted">Loading comparison…</p></div>
     </section>
     <section class="trip-section" aria-labelledby="trips-heading">
       <div class="section-title"><h2 id="trips-heading">Trips with an announced delay <span id="trip-count" class="count"></span></h2><span class="muted">Largest delay first</span></div>
