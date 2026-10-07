@@ -2,14 +2,19 @@
 
 A GitHub Pages report with side-by-side feed coverage, trip matching and expandable arrival/departure delays at each reported stop. The report is built from two concurrently fetched snapshots, with no live browser requests to the upstream feeds.
 
-The interface copies the red header, branding, typography, page width and footer styles from `../irail.be`, with blue statistics and comparison-specific layouts in `web/styles.css`. The iRail logo and favicon are copied from that project's existing SVG assets. SNCB is the reference: BMC statistic bars turn red when totals differ, with red missing/extra counts under the black totals. Maximum-delay differences use time units rather than item counts. Missing trips/stops and non-zero delay deltas are red; announced delay values remain black. Unknown values are not treated as mismatches.
-
 ## Feeds
 
 - **SNCB:** <https://sncb-opendata.hafas.de/gtfs/realtime/d22ad6759ee25bg84ddb6c818g4dc4de_TC>
 - **BMC:** <https://api-management-discovery-production.azure-api.net/api/gtfs/feed/nmbssncb/rt/trip-update?format=protobuf>
 
 The originally supplied BMC URL ending in `/trip-update.pbf` returns 404. The replacement `opendata-discovery-gtfs-realtime.api.production.belgianmobility.io` hostname did not resolve during verification. The working BMC endpoint uses `/trip-update?format=protobuf`; without the format option it returns JSON. Both feeds were successfully decoded during development.
+
+Both static archives are downloaded on every workflow run, alongside the realtime feeds:
+
+- **SNCB static GTFS:** <https://sncb-opendata.hafas.de/gtfs/static/c21ac6758dd25af84cca5b707f3cb3de>, overridden with `SNCB_STATIC_GTFS_URL`.
+- **BMC static GTFS:** <https://gtfs.flatturtle.cloud/sncb-nmbs/_latest/sncb-nmbs-gtfs.zip>, overridden with `STATIC_GTFS_URL`.
+
+Each archive has its own protobuf trip index, ID audit and expandable trip information.
 
 ## GitHub Pages setup
 
@@ -57,6 +62,35 @@ Both header fields must be set to send authentication. Credentials and overridde
 
 See the [GTFS realtime specification](https://gtfs.org/documentation/realtime/reference/) for field semantics.
 
+## Static trip lookups
+
+The report checks **all** realtime trips against both static `trips.txt` databases. Each source has its own summary of IDs found, IDs absent, active service dates and start-time differences. The delayed-trip table has **In SNCB static GTFS?** and **In BMC static GTFS?** columns, displaying Yes, No or Unknown independently. Missing IDs appear in red. Each Yes has a **Trip info** button for that source's train number, headsign, route, calendar and scheduled stops.
+
+Only the known `gt:nmbssncb:` namespace is added or removed for lookup. All other parts of IDs remain intact. Service activity and start-time checks remain separate from ID presence. An unavailable static source leaves only its own matches unknown and does not prevent the other lookup or realtime report from publishing.
+
+Train website links prefer the SNCB static record and fall back to the BMC record. Links use an advertised numeric train number and the realtime service date, and show the websites' latest information rather than captured delays. An ID match does not establish complete planner applicability: service dates, start times and stop compatibility also matter.
+
+The [saved source comparison](docs/factcheck-hafas-2026-10-07.md) records why checking both databases matters.
+
+The workflow publishes:
+
+- `sncb-static-trips.pb` and `static-trips.pb`: independent SNCB and BMC protobuf maps of **every** original static trip ID to its trip metadata, plus route records. Its schema is [`schemas/static_trips.proto`](schemas/static_trips.proto). It is a trip/route index, not a complete routing database; schedules and service-date checks for current matching realtime trips are in `report.json`.
+- `sncb-static-audit.json` and `static-audit.json`: each archive’s SHA-256, source, feed version, download metadata, all-trip summary counts and evidence for every SNCB trip missing from BMC.
+- `report.json`: realtime hashes/timestamps, both static audits and matching trip/calendar/schedule information used by the page.
+
+To query the protobuf index locally:
+
+```python
+from pathlib import Path
+from scripts.static_trips_pb2 import TripIndex
+
+index = TripIndex.FromString(Path('_site/sncb-static-trips.pb').read_bytes())
+trip_id = 'YOUR_TRIP_ID'
+if trip_id in index.trips:
+    trip = index.trips[trip_id]
+    print(trip.trip_short_name, trip.trip_headsign, trip.service_id)
+```
+
 ## Local development
 
 ```bash
@@ -70,7 +104,7 @@ python3 -m venv .venv
 Open <http://localhost:8000>. To verify with saved protobuf snapshots:
 
 ```bash
-.venv/bin/python scripts/build_report.py --sncb-file /tmp/sncb.pbf --bmc-file /tmp/bmc.pbf
+.venv/bin/python scripts/build_report.py --sncb-file /tmp/sncb.pbf --bmc-file /tmp/bmc.pbf --static-file /tmp/static.zip --sncb-static-file /tmp/sncb-static.zip
 ```
 
-Reports built with saved files display a local verification banner. Production builds fetch live snapshots. `report.json` contains summary metadata and the original trip/stop details for delayed trips; `.nojekyll`, HTML, CSS and JavaScript are the other output artifacts. All asset paths are relative so the site works under a GitHub Pages repository subpath.
+Reports built with saved files display a local verification banner. Production builds fetch live snapshots. `report.json` contains summary metadata and the original trip/stop details for delayed trips. The site also includes the static index, schema and audit, plus `.nojekyll`, HTML, CSS and JavaScript. All asset paths are relative so the site works under a GitHub Pages repository subpath.

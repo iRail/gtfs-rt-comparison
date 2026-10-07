@@ -60,11 +60,73 @@ function tripDelay(trip, feed) {
 function serviceDate(value) {
   return /^\d{8}$/.test(value) ? `${value.slice(0, 4)}-${value.slice(4, 6)}-${value.slice(6, 8)}` : value || "Date not supplied";
 }
+const staticSources = {
+  sncb: {field: "sncb_static_gtfs", match: "sncb_static_match", label: "SNCB static GTFS", prefix: "sncb-"},
+  bmc: {field: "static_gtfs", match: "static_match", label: "BMC static GTFS", prefix: ""},
+};
+function renderStaticAudit(report) {
+  const labels = {sncb_all: "All SNCB realtime trips", bmc_all: "All BMC realtime trips", missing_from_bmc: "SNCB trips missing from BMC", retained_by_bmc: "SNCB trips retained by BMC"};
+  byId("static-audit").innerHTML = Object.entries(staticSources).map(([source, config]) => {
+    const feed = report[config.field];
+    if (feed?.status !== "ok") return `<div class="static-source"><h3>${config.label}</h3><p class="unknown">${escapeHTML(feed?.error ?? "Static archive unavailable.")} ID matches are unknown.</p></div>`;
+    return `<div class="static-source"><h3>${config.label}</h3><div class="table-scroll"><table class="audit-table"><caption class="sr-only">${config.label} trip-ID lookup</caption><thead><tr><th scope="col">Realtime trips</th><th scope="col">Total</th><th scope="col">ID found</th><th scope="col">ID absent</th><th scope="col">Active service date</th><th scope="col">Start time differs</th></tr></thead><tbody>${Object.entries(feed.audit).map(([group, values]) => `<tr><th scope="row">${labels[group]}</th><td>${number(values.total)}</td><td>${number(values.id_found)}</td><td class="${values.id_missing ? "mismatch" : ""}">${number(values.id_missing)}</td><td>${number(values.active_service)}</td><td class="${values.start_time_mismatch ? "mismatch" : ""}">${number(values.start_time_mismatch)}</td></tr>`).join("")}</tbody></table></div><p class="static-metadata">${number(feed.trip_count)} static trips · version ${escapeHTML(feed.feed_info[0]?.feed_version || "not supplied")} · fetched ${escapeHTML(dateTime(feed.fetched_at))}</p><div class="static-links"><a href="${escapeHTML(feed.source_url)}">Source GTFS ZIP</a><a href="${escapeHTML(feed.index_file)}" download>Download protobuf trip index</a><a href="${escapeHTML(feed.schema_file)}" download>Protobuf schema</a><a href="${config.prefix}static-audit.json" download>Download ID audit</a></div></div>`;
+  }).join("");
+}
+function staticMatch(row, source = "bmc") {
+  const field = staticSources[source].match;
+  return row.sncb?.[field] ?? row.bmc?.[field];
+}
+function staticRecord(row, report, source) {
+  const match = staticMatch(row, source);
+  return report[staticSources[source].field]?.matched_records?.[match?.static_trip_id];
+}
+function trainLinks(row, report) {
+  const record = staticRecord(row, report, "sncb") ?? staticRecord(row, report, "bmc");
+  const trainNumber = record?.trip.trip_short_name?.trim();
+  // Use the advertised train number, never a number guessed from an opaque trip ID.
+  if (!/^\d+$/.test(trainNumber ?? "") || !/^\d{8}$/.test(row.start_date)) return "";
+  const date = serviceDate(row.start_date);
+  const irail = new URL("https://irail.be/");
+  irail.search = new URLSearchParams({view: "train", train: trainNumber, date});
+  const belgianTrain = new URL("https://www.belgiantrain.be/en/travel-info/current/search-by-train-number");
+  belgianTrain.search = new URLSearchParams({trainNumber, date});
+  return `<span class="train-number">Train ${escapeHTML(trainNumber)}</span><span class="train-links"><a href="${escapeHTML(irail.href)}" target="_blank" rel="noopener noreferrer" aria-label="Train ${escapeHTML(trainNumber)} on iRail for ${date} (opens a new tab)">iRail ↗</a><a href="${escapeHTML(belgianTrain.href)}" target="_blank" rel="noopener noreferrer" aria-label="Train ${escapeHTML(trainNumber)} on Belgian Train for ${date} (opens a new tab)">Belgian Train ↗</a></span>`;
+}
+function staticCell(row, report, source) {
+  const match = staticMatch(row, source);
+  if (report[staticSources[source].field]?.status !== "ok" || !match) return '<span class="unknown">Unknown</span>';
+  if (!match.id_found) return '<span class="mismatch">No</span>';
+  const index = report.comparison.rows.indexOf(row);
+  return `<span class="static-found">Yes</span><button type="button" class="details-button" data-static-row="${index}" data-static-source="${source}" aria-label="${staticSources[source].label} trip information for ${escapeHTML(row.trip_id)}" aria-expanded="false" aria-controls="static-${source}-${index}">Trip info</button>${match.service_active === false ? '<span class="stop-state mismatch">Inactive service date</span>' : ""}${match.start_time_matches === false ? '<span class="stop-state mismatch">Start time differs</span>' : ""}`;
+}
+function staticDetails(row, report, source) {
+  const match = staticMatch(row, source);
+  const record = staticRecord(row, report, source);
+  if (!record) return '<p class="unknown">Static trip information unavailable.</p>';
+  const fields = (object) => Object.entries(object ?? {}).map(([name, value]) => `<div><dt>${escapeHTML(name.replaceAll("_", " "))}</dt><dd>${escapeHTML(value || "Not supplied")}</dd></div>`).join("");
+  const state = (value) => value == null ? "Unknown" : value ? "Yes" : "No";
+  return `<h3>${staticSources[source].label} · train ${escapeHTML(record.trip.trip_short_name || row.trip_id)}</h3><p class="static-metadata">ID found in trips.txt. Service active on ${escapeHTML(serviceDate(match.service_date ?? ""))}: <span class="${match.service_active === false ? "mismatch" : ""}">${state(match.service_active)}</span>. Start time matches the first scheduled departure: <span class="${match.start_time_matches === false ? "mismatch" : ""}">${state(match.start_time_matches)}</span>.</p><div class="static-record-grid"><div><h4>Trip</h4><dl class="static-fields">${fields(record.trip)}</dl></div><div><h4>Route</h4><dl class="static-fields">${fields(record.route)}</dl></div><div><h4>Service calendar</h4><dl class="static-fields">${fields(record.calendar)}</dl>${record.calendar_exceptions.length ? `<p class="static-metadata">Exceptions on the checked realtime dates: ${record.calendar_exceptions.map((item) => `${escapeHTML(serviceDate(item.date))}: ${item.exception_type === "1" ? "service added" : "service removed"}`).join("; ")}</p>` : ""}</div></div><h4>Scheduled stops</h4><div class="stop-details"><table class="static-schedule"><thead><tr><th scope="col">Sequence</th><th scope="col">Station / stop ID</th><th scope="col">Arrival</th><th scope="col">Departure</th></tr></thead><tbody>${record.scheduled_stops.map((stop) => `<tr><td>${escapeHTML(stop.stop_sequence)}</td><td>${escapeHTML(stop.stop_name)}<span class="stop-state">${escapeHTML(stop.stop_id)}</span></td><td>${escapeHTML(stop.arrival_time || "Not supplied")}</td><td>${escapeHTML(stop.departure_time || "Not supplied")}</td></tr>`).join("")}</tbody></table></div>`;
+}
 function renderTrips(report) {
   const rows = report.comparison.rows;
   byId("trip-count").textContent = number(rows.length);
-  byId("trips").innerHTML = rows.length ? rows.map((row, index) => `<tr><td><span class="trip-id">${escapeHTML(row.trip_id)}</span><span class="trip-instance">${escapeHTML(serviceDate(row.start_date))} · ${escapeHTML(row.start_time || "Start time not supplied")}</span></td><td>${tripDelay(row.sncb, report.feeds.sncb)}</td><td>${tripDelay(row.bmc, report.feeds.bmc)}</td><td class="delta${row.difference_seconds != null && row.difference_seconds !== 0 ? " mismatch" : ""}">${delay(row.difference_seconds, true)}</td><td><button type="button" class="details-button" data-row="${index}" aria-label="Show stops for ${escapeHTML(row.trip_id)}" aria-expanded="false" aria-controls="details-${index}">Stops</button></td></tr><tr id="details-${index}" class="details-row" hidden><td colspan="5"></td></tr>`).join("") : `<tr><td colspan="5" class="empty">${report.comparison.available ? "Neither feed announces a positive delay in this snapshot." : "No positive delays found in the available feed data. The comparison is incomplete."}</td></tr>`;
+  byId("trips").innerHTML = rows.length ? rows.map((row, index) => `<tr><td><span class="trip-id">${escapeHTML(row.trip_id)}</span><span class="trip-instance">${escapeHTML(serviceDate(row.start_date))} · ${escapeHTML(row.start_time || "Start time not supplied")}</span>${trainLinks(row, report)}</td><td>${tripDelay(row.sncb, report.feeds.sncb)}</td><td>${tripDelay(row.bmc, report.feeds.bmc)}</td><td class="delta${row.difference_seconds != null && row.difference_seconds !== 0 ? " mismatch" : ""}">${delay(row.difference_seconds, true)}</td><td>${staticCell(row, report, "sncb")}</td><td>${staticCell(row, report, "bmc")}</td><td><button type="button" class="details-button" data-row="${index}" aria-label="Show stops for ${escapeHTML(row.trip_id)}" aria-expanded="false" aria-controls="details-${index}">Stops</button></td></tr>${Object.keys(staticSources).map((source) => `<tr id="static-${source}-${index}" class="details-row" hidden><td colspan="7"></td></tr>`).join("")}<tr id="details-${index}" class="details-row" hidden><td colspan="7"></td></tr>`).join("") : `<tr><td colspan="7" class="empty">${report.comparison.available ? "Neither feed announces a positive delay in this snapshot." : "No positive delays found in the available feed data. The comparison is incomplete."}</td></tr>`;
   byId("trips").addEventListener("click", (event) => {
+    const staticButton = event.target.closest("button[data-static-row]");
+    if (staticButton) {
+      const index = Number(staticButton.dataset.staticRow);
+      const source = staticButton.dataset.staticSource;
+      const detail = byId(`static-${source}-${index}`);
+      const open = staticButton.getAttribute("aria-expanded") !== "true";
+      if (open && !detail.dataset.rendered) {
+        detail.firstElementChild.innerHTML = staticDetails(rows[index], report, source);
+        detail.dataset.rendered = "true";
+      }
+      detail.hidden = !open;
+      staticButton.setAttribute("aria-expanded", String(open));
+      staticButton.textContent = open ? "Hide trip info" : "Trip info";
+      return;
+    }
     const button = event.target.closest("button[data-row]");
     if (!button) return;
     const index = Number(button.dataset.row);
@@ -131,6 +193,7 @@ async function main() {
     notices(messages);
     metrics(report.feeds);
     agreement(report.comparison);
+    renderStaticAudit(report);
     renderTrips(report);
   } catch (error) {
     byId("generated-at").textContent = "Report unavailable";
@@ -138,8 +201,9 @@ async function main() {
     byId("metrics").innerHTML = '<p class="empty">No report data available.</p>';
     byId("metrics").setAttribute("aria-busy", "false");
     for (const name of ["sncb", "bmc"]) byId(`${name}-status`).textContent = "Unknown";
+    byId("static-audit").innerHTML = '<p class="muted">Static check unavailable.</p>';
     byId("agreement").innerHTML = '<p class="muted">Comparison unavailable.</p>';
-    byId("trips").innerHTML = '<tr><td colspan="5" class="empty">Trip details unavailable.</td></tr>';
+    byId("trips").innerHTML = '<tr><td colspan="7" class="empty">Trip details unavailable.</td></tr>';
     console.error("Could not load GTFS-RT report", error);
   }
 }

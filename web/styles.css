@@ -247,16 +247,35 @@ h3 { font-size: 1rem; }
 .agreement-number { display: block; font-size: 1.7rem; font-weight: 900; font-variant-numeric: tabular-nums; }
 .agreement-label { display: block; color: var(--muted); font-size: .8rem; }
 .agreement p { margin-top: .65rem; color: var(--muted); font-size: .9rem; }
+.static-audit { padding: 1rem; margin: 1.5rem 0; }
+.static-verdict { margin: .75rem 0 1rem; }
+.static-caveat, .static-metadata { margin-top: .75rem; color: var(--muted); font-size: .875rem; }
+.static-metadata code { overflow-wrap: anywhere; }
+.static-links { display: flex; flex-wrap: wrap; gap: .75rem 1.25rem; margin-top: .75rem; font-size: .875rem; }
+.audit-table { min-width: 760px; }
+.audit-table tbody th { white-space: normal; background: #fff; }
+.static-found { display: block; color: #000; margin-bottom: .4rem; }
+.static-record-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.25rem; }
+.static-record-grid h4 { margin: 1rem 0 .5rem; }
+.static-fields { margin: 0; font-size: .8rem; }
+.static-fields div { padding: .4rem 0; border-bottom: 1px solid var(--line); }
+.static-fields dt { color: var(--muted); }
+.static-fields dd { margin: .15rem 0 0; overflow-wrap: anywhere; }
+.static-schedule { min-width: 550px; }
 .table-note { margin: -.25rem 0 1rem; color: var(--muted); font-size: .9rem; }
 .count { display: inline-block; margin-left: .5rem; padding: .15rem .6rem; border-radius: 999px; background: var(--line-soft); font-size: .85rem; font-weight: 800; }
 .table-scroll { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; font-size: .9rem; text-align: left; }
 th { color: var(--muted); background: var(--line-soft); font-size: .875rem; font-weight: 800; white-space: nowrap; }
 th, td { padding: .85rem 1rem; border-bottom: 1px solid var(--line-soft); }
-.trip-table > thead th:first-child { width: 55%; }
+.trip-table > thead th:first-child { width: 40%; }
 .trip-table > tbody > tr:last-child > td { border-bottom: 0; }
 .trip-id { display: block; overflow-wrap: anywhere; font-family: var(--mono); font-size: .8rem; line-height: 1.5; }
 .trip-instance { display: block; margin-top: .2rem; color: var(--muted); font-size: .8rem; }
+.train-number { display: block; margin-top: .5rem; color: #000; font-size: .8rem; font-weight: 700; }
+.train-links { display: flex; flex-wrap: wrap; gap: .35rem 1rem; margin-top: .25rem; font-size: .8rem; }
+.train-links a { color: #2460bb; text-decoration: underline; text-underline-offset: .15em; }
+.train-links a:hover { color: #174786; }
 .delay-value { color: #000; font-size: .9rem; font-weight: 900; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .unknown { color: var(--muted); font-size: .8rem; }
 .delta, .event-delay { color: #000; white-space: nowrap; font-variant-numeric: tabular-nums; }
@@ -294,6 +313,7 @@ code { font-family: var(--mono); font-size: .85em; }
   .metric-reading { align-items: flex-start; }
   .metric-difference { text-align: left; }
   .method-grid, .details-meta { grid-template-columns: minmax(0, 1fr); }
+  .static-record-grid { grid-template-columns: minmax(0, 1fr); }
   .section-title { align-items: flex-start; flex-wrap: wrap; gap: .5rem; }
   .trip-table { min-width: 640px; }
   .site-footer { flex-direction: column; }
@@ -316,3 +336,6 @@ code { font-family: var(--mono); font-size: .85em; }
 @media (prefers-reduced-motion: no-preference) {
   .metric-bar span { transition: width .3s ease; }
 }
+
+.static-source + .static-source { margin-top: 2rem; }
+.static-source h3 { margin-bottom: .75rem; }

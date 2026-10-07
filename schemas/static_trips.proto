@@ -1,0 +1,26 @@
+syntax = "proto3";
+package irail.static_gtfs;
+
+// trips is keyed by the original trips.txt trip_id; namespaces are preserved.
+message Trip {
+  string route_id = 1;
+  string service_id = 2;
+  string trip_headsign = 3;
+  string trip_short_name = 4;
+  string direction_id = 5;
+  string block_id = 6;
+  string shape_id = 7;
+  string wheelchair_accessible = 8;
+  string bikes_allowed = 9;
+}
+message Row {
+  map<string, string> fields = 1;
+}
+message TripIndex {
+  uint32 format_version = 1;
+  string source_url = 2;
+  string sha256 = 3;
+  string generated_at = 4;
+  map<string, Trip> trips = 5;
+  map<string, Row> routes = 6;
+}

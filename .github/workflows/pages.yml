@@ -33,6 +33,8 @@ jobs:
         env:
           SNCB_FEED_URL: ${{ vars.SNCB_FEED_URL }}
           BMC_FEED_URL: ${{ vars.BMC_FEED_URL }}
+          STATIC_GTFS_URL: ${{ vars.STATIC_GTFS_URL }}
+          SNCB_STATIC_GTFS_URL: ${{ vars.SNCB_STATIC_GTFS_URL }}
           SNCB_AUTH_HEADER: ${{ vars.SNCB_AUTH_HEADER }}
           SNCB_AUTH_VALUE: ${{ secrets.SNCB_AUTH_VALUE }}
           BMC_AUTH_HEADER: ${{ vars.BMC_AUTH_HEADER }}

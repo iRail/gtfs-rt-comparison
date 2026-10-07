@@ -6,6 +6,7 @@ import argparse
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 import json
+import hashlib
 import os
 from pathlib import Path
 import shutil
@@ -15,6 +16,11 @@ from urllib.request import Request, urlopen
 
 from google.protobuf.message import DecodeError
 from google.transit import gtfs_realtime_pb2 as gtfs
+
+if __package__:
+    from .static_gtfs import enrich_and_audit, fetch_archive, SNCB_STATIC_URL
+else:
+    from static_gtfs import enrich_and_audit, fetch_archive, SNCB_STATIC_URL
 
 ROOT = Path(__file__).resolve().parents[1]
 FEEDS = {
@@ -152,6 +158,7 @@ def parse_feed(data, name, fetched_at, elapsed_seconds=0):
         "name": name.upper(), "status": "ok", "error": None,
         "fetched_at": fetched_at, "feed_timestamp": timestamp, "age_seconds": age,
         "elapsed_seconds": round(elapsed_seconds, 2), "bytes": len(data),
+        "sha256": hashlib.sha256(data).hexdigest(),
         "version": feed.header.gtfs_realtime_version,
         "entities": len(feed.entity), "trip_update_entities": trip_entities,
         "deleted_entities": deleted, "duplicate_trips": duplicates,
@@ -242,11 +249,17 @@ def compare(feeds):
     }
 
 
-def build_report(output, fixtures=None):
+def build_report(output, fixtures=None, static_file=None, sncb_static_file=None):
     fixtures = fixtures or {}
-    with ThreadPoolExecutor(max_workers=2) as pool:
+    with ThreadPoolExecutor(max_workers=4) as pool:
         jobs = {name: pool.submit(fetch_feed, name, fixtures.get(name)) for name in FEEDS}
+        static_job = pool.submit(fetch_archive, static_file)
+        sncb_static_job = pool.submit(fetch_archive, sncb_static_file, os.environ.get("SNCB_STATIC_GTFS_URL") or SNCB_STATIC_URL)
         feeds = {name: job.result() for name, job in jobs.items()}
+        downloaded = static_job.result()
+        sncb_downloaded = sncb_static_job.result()
+    static_gtfs = enrich_and_audit(feeds, downloaded, output)
+    sncb_static_gtfs = enrich_and_audit(feeds, sncb_downloaded, output, match_field="sncb_static_match", prefix="sncb-")
     comparison = compare(feeds)
     # Full trip details are included once, in the delayed-trip rows.
     for feed in feeds.values():
@@ -254,13 +267,17 @@ def build_report(output, fixtures=None):
     report = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "timezone": "Europe/Brussels", "feeds": feeds, "comparison": comparison,
-        "fixture_mode": bool(fixtures),
+        "fixture_mode": bool(fixtures) or static_file is not None or sncb_static_file is not None,
+        "static_gtfs": static_gtfs, "sncb_static_gtfs": sncb_static_gtfs,
     }
     output.mkdir(parents=True, exist_ok=True)
     for path in (ROOT / "web").iterdir():
         if path.is_file():
             shutil.copy2(path, output / path.name)
     (output / "report.json").write_text(json.dumps(report, ensure_ascii=False, separators=(",", ":")) + "\n")
+    (output / "static-audit.json").write_text(json.dumps({key: value for key, value in static_gtfs.items()
+                                                         if key != "matched_records"}, ensure_ascii=False, indent=2) + "\n")
+    (output / "sncb-static-audit.json").write_text(json.dumps({key: value for key, value in sncb_static_gtfs.items() if key != "matched_records"}, ensure_ascii=False, indent=2) + "\n")
     (output / ".nojekyll").touch()
     summary = ["## GTFS-RT comparison", "", f"Built: {report['generated_at']}", ""]
     for name, feed in feeds.items():
@@ -271,6 +288,16 @@ def build_report(output, fixtures=None):
             summary.append(f"- {name.upper()}: {feed['error']}")
             print(f"::warning title={name.upper()} feed unavailable::{feed['error']}")
     summary.append(f"\nDelayed trip rows: {len(comparison['rows'])}")
+    if static_gtfs["status"] == "ok":
+        for group, values in static_gtfs["audit"].items():
+            summary.append(f"- Static ID check, {group}: {values['id_found']} found, {values['id_missing']} absent, {values['total']} total")
+    else:
+        print(f"::warning title=Static GTFS unavailable::{static_gtfs['error']}")
+    if sncb_static_gtfs["status"] == "ok":
+        for group, values in sncb_static_gtfs["audit"].items():
+            summary.append(f"- SNCB static ID check, {group}: {values['id_found']} found, {values['id_missing']} absent, {values['total']} total")
+    else:
+        print(f"::warning title=SNCB static GTFS unavailable::{sncb_static_gtfs['error']}")
     text = "\n".join(summary) + "\n"
     print(text)
     if os.environ.get("GITHUB_STEP_SUMMARY"):
@@ -284,8 +311,10 @@ def main():
     parser.add_argument("--output", type=Path, default=ROOT / "_site")
     parser.add_argument("--sncb-file", type=Path, help="Use a saved protobuf feed for local verification")
     parser.add_argument("--bmc-file", type=Path, help="Use a saved protobuf feed for local verification")
+    parser.add_argument("--static-file", type=Path, help="Use a saved static GTFS ZIP for local verification")
+    parser.add_argument("--sncb-static-file", type=Path, help="Use a saved SNCB static GTFS ZIP for local verification")
     args = parser.parse_args()
-    build_report(args.output, {name: path for name, path in {"sncb": args.sncb_file, "bmc": args.bmc_file}.items() if path})
+    build_report(args.output, {name: path for name, path in {"sncb": args.sncb_file, "bmc": args.bmc_file}.items() if path}, args.static_file, args.sncb_static_file)
 
 
 if __name__ == "__main__":

@@ -174,7 +174,7 @@ class BuildTests(unittest.TestCase):
             fixture.write_bytes(message.SerializeToString())
             output = Path(directory) / "site"
             with patch.dict("os.environ", {"GITHUB_STEP_SUMMARY": ""}):
-                report = build_report(output, {"sncb": fixture, "bmc": Path(directory) / "missing.pbf"})
+                report = build_report(output, {"sncb": fixture, "bmc": Path(directory) / "missing.pbf"}, Path(directory) / "missing.zip", Path(directory) / "missing-sncb.zip")
             self.assertTrue((output / "index.html").is_file())
             self.assertTrue((output / ".nojekyll").is_file())
             self.assertFalse(report["comparison"]["available"])
